@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seattle Bathroom Finder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .header {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .header .status {
+            font-size: 14px;
+            color: #27ae60;
+            font-weight: 500;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 100px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            max-width: 200px;
+        }
+        
+        .controls h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .filter-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .filter-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .filter-toggle label {
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .stats {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ecf0f1;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+        
+        .popup-content h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .popup-content p {
+            margin: 5px 0;
+            font-size: 13px;
+            color: #555;
+        }
+        
+        .popup-content .code {
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        
+        .popup-content .hours {
+            background: #ecf0f1;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .popup-content .hours strong {
+            color: #27ae60;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-size: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .open { background: #27ae60; }
+        .closed { background: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚻 Seattle Bathroom Finder</h1>
+        <div class="status" id="currentTime"></div>
+    </div>
+    
+    <div class="controls">
+        <h3>Filters</h3>
+        <div class="filter-toggle">
+            <input type="checkbox" id="showOpenOnly" checked>
+            <label for="showOpenOnly">Show open only</label>
+        </div>
+        <div class="stats">
+            <div><strong id="openCount">0</strong> open now</div>
+            <div><strong id="totalCount">0</strong> total</div>
+        </div>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-dot open"></div>
+            <span>Open Now</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot closed"></div>
+            <span>Closed</span>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Bathroom data
+        const bathrooms = [
+            {"name":"Aviv Hummus Bar","address":"107 15th Ave E, Seattle, WA 98112","lat":47.618825,"lng":-122.312891,"code":"8269","verified":"01/01/2024","hours":{"Mon":{"open1":"Closed"},"Tue":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Wed":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Thu":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Fri":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Sat":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Sun":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"}}},
+            {"name":"Gearhouse","address":"800 E Thomas St, Seattle, WA 98102","lat":47.621203,"lng":-122.32183,"code":"90210","verified":"01/01/2024","hours":{"Mon":{"open1":"07:30","close1":"20:00"},"Tue":{"open1":"07:30","close1":"20:00"},"Wed":{"open1":"07:30","close1":"20:00"},"Thu":{"open1":"07:30","close1":"20:00"},"Fri":{"open1":"07:30","close1":"20:00"},"Sat":{"open1":"07:00","close1":"19:00"},"Sun":{"open1":"07:00","close1":"19:00"}}},
+            {"name":"Carmelos Tacos","address":"101 Broadway E, Seattle, WA 98102","lat":47.618738,"lng":-122.320856,"code":"3569","verified":"01/01/2024","hours":{"Mon":{"open1":"10:00","close1":"22:00"},"Tue":{"open1":"10:00","close1":"22:00"},"Wed":{"open1":"10:00","close1":"22:00"},"Thu":{"open1":"10:00","close1":"22:00"},"Fri":{"open1":"10:00","close1":"23:00"},"Sat":{"open1":"10:00","close1":"23:00"},"Sun":{"open1":"10:00","close1":"22:00"}}},
+            {"name":"Diller Room","address":"1224 1st Ave, Seattle, WA 98101","lat":47.606769,"lng":-122.337908,"code":"2112","verified":"01/01/2024","hours":{"Mon":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Tue":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Wed":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Thu":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Fri":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Sat":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Sun":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"}}},
+            {"name":"The Last Drop Bottle Shop - Capitol Hill","address":"8016 15th Ave NE, Seattle, WA 98115","lat":47.68719,"lng":-122.311964,"code":"8016","verified":"01/01/2024","hours":{"Mon":{"open1":"14:00","close1":"22:00"},"Tue":{"open1":"14:00","close1":"22:00"},"Wed":{"open1":"14:00","close1":"23:00"},"Thu":{"open1":"14:00","close1":"23:30"},"Fri":{"open1":"14:00","close1":"23:59"},"Sat":{"open1":"14:00","close1":"23:59"},"Sun":{"open1":"14:00","close1":"22:00"}}},
+            {"name":"Lost Lake Cafe & Lounge","address":"1505 10th Ave, Seattle, WA 98122","lat":47.614354,"lng":-122.31962,"code":"8003","verified":"01/01/2024","hours":{"Mon":{"open1":"07:00","close1":"23:59"},"Tue":{"open1":"07:00","close1":"23:59"},"Wed":{"open1":"07:00","close1":"23:59"},"Thu":{"open1":"07:00","close1":"23:59"},"Fri":{"open1":"00:00","close1":"02:00","open2":"07:00","close2":"23:59"},"Sat":{"open1":"00:00","close1":"03:00","open2":"07:00","close2":"23:59"},"Sun":{"open1":"00:00","close1":"03:00","open2":"07:00","close2":"23:59"}}},
+            {"name":"Top Pot Doughnuts","address":"888 Western Ave, Seattle, WA 98104","lat":47.603267,"lng":-122.336166,"code":"1188","verified":"01/01/2024","hours":{"Mon":{"open1":"06:00","close1":"17:00"},"Tue":{"open1":"06:00","close1":"17:00"},"Wed":{"open1":"06:00","close1":"17:00"},"Thu":{"open1":"06:00","close1":"17:00"},"Fri":{"open1":"06:00","close1":"17:00"},"Sat":{"open1":"07:00","close1":"17:00"},"Sun":{"open1":"07:00","close1":"17:00"}}},
+            {"name":"Shake Shack","address":"2115 Westlake Ave N, Seattle, WA 98121","lat":47.617065,"lng":-122.338458,"code":"2392","verified":"01/01/2024","hours":{"Mon":{"open1":"10:00","close1":"23:00"},"Tue":{"open1":"10:00","close1":"23:00"},"Wed":{"open1":"10:00","close1":"23:00"},"Thu":{"open1":"10:00","close1":"23:00"},"Fri":{"open1":"10:00","close1":"23:59"},"Sat":{"open1":"10:00","close1":"23:59"},"Sun":{"open1":"10:00","close1":"23:00"}}},
+            {"name":"The Victor Tavern - 6th & Lenora","address":"2121 6th Ave, Seattle, WA 98121","lat":47.615166,"lng":-122.340057,"code":"5951","verified":"01/01/2024","hours":{"Mon":{"open1":"11:00","close1":"22:00"},"Tue":{"open1":"11:00","close1":"22:00"},"Wed":{"open1":"11:00","close1":"22:00"},"Thu":{"open1":"11:00","close1":"22:00"},"Fri":{"open1":"11:00","close1":"22:00"},"Sat":{"open1":"11:00","close1":"22:00"},"Sun":{"open1":"11:00","close1":"21:00"}}},
+            {"name":"Due' Cucina Italian Restaurant - Capitol Hill","address":"412 Broadway E, Seattle, WA 98102","lat":47.622127,"lng":-122.320759,"code":"7825","verified":"01/01/2024","hours":{"Mon":{"open1":"11:30","close1":"21:30"},"Tue":{"open1":"11:30","close1":"21:30"},"Wed":{"open1":"11:30","close1":"21:30"},"Thu":{"open1":"11:30","close1":"21:30"},"Fri":{"open1":"11:30","close1":"21:30"},"Sat":{"open1":"11:30","close1":"21:30"},"Sun":{"open1":"11:30","close1":"21:30"}}},
+            {"name":"Von's 1000 Spirits","address":"1225 1st Ave, Seattle, WA 98101","lat":47.606538,"lng":-122.338225,"code":"1904","verified":"01/01/2024","hours":{"Mon":{"open1":"11:00","close1":"23:59"},"Tue":{"open1":"11:00","close1":"23:59"},"Wed":{"open1":"11:00","close1":"23:59"},"Thu":{"open1":"11:00","close1":"23:59"},"Fri":{"open1":"11:00","close1":"23:59"},"Sat":{"open1":"00:00","close1":"01:00","open2":"11:00","close2":"23:59"},"Sun":{"open1":"00:00","close1":"01:00","open2":"11:00","close2":"23:59"}}},
+            {"name":"Gameworks","address":"1511 7th Ave, Seattle, WA 98101","lat":47.611869,"lng":-122.33393,"code":"2142","verified":"01/01/2024","hours":{"Mon":{"open1":"12:00","close1":"20:00"},"Tue":{"open1":"Closed"},"Wed":{"open1":"12:00","close1":"21:00"},"Thu":{"open1":"12:00","close1":"21:00"},"Fri":{"open1":"12:00","close1":"23:00"},"Sat":{"open1":"11:00","close1":"23:00"},"Sun":{"open1":"11:00","close1":"21:00"}}},
+            {"name":"Victrola Coffee Roasters","address":"310 E Pike St, Seattle, WA 98122","lat":47.614297,"lng":-122.327315,"code":"9010","verified":"01/01/2024","hours":{"Mon":{"open1":"07:00","close1":"18:00"},"Tue":{"open1":"07:00","close1":"18:00"},"Wed":{"open1":"07:00","close1":"18:00"},"Thu":{"open1":"07:00","close1":"18:00"},"Fri":{"open1":"07:00","close1":"18:00"},"Sat":{"open1":"07:00","close1":"18:00"},"Sun":{"open1":"07:00","close1":"18:00"}}},
+            {"name":"Espresso Vivace Capitol Hill","address":"532 Broadway E, Seattle, WA 98102","lat":47.623501,"lng":-122.32078,"code":"2009","verified":"01/01/2024","hours":{"Mon":{"open1":"06:00","close1":"19:00"},"Tue":{"open1":"06:00","close1":"19:00"},"Wed":{"open1":"06:00","close1":"19:00"},"Thu":{"open1":"06:00","close1":"19:00"},"Fri":{"open1":"06:00","close1":"19:00"},"Sat":{"open1":"06:00","close1":"19:00"},"Sun":{"open1":"06:00","close1":"19:00"}}},
+            {"name":"Fairview Market Hall","address":"400 Fairview Ave N, Seattle, WA 98109","lat":47.622511,"lng":-122.333902,"code":"820","verified":"01/01/2024","hours":{"Mon":{"open1":"00:00","close1":"23:59"},"Tue":{"open1":"00:00","close1":"23:59"},"Wed":{"open1":"00:00","close1":"23:59"},"Thu":{"open1":"00:00","close1":"23:59"},"Fri":{"open1":"00:00","close1":"23:59"},"Sat":{"open1":"00:00","close1":"23:59"},"Sun":{"open1":"00:00","close1":"23:59"}}},
+            {"name":"Anchorhead Coffee","address":"2003 Western Ave STE 110A, Seattle, WA 98121","lat":47.610784,"lng":-122.344808,"code":"1379","verified":"01/01/2024","hours":{"Mon":{"open1":"07:00","close1":"15:30"},"Tue":{"open1":"07:00","close1":"15:30"},"Wed":{"open1":"07:00","close1":"15:30"},"Thu":{"open1":"07:00","close1":"15:30"},"Fri":{"open1":"07:00","close1":"15:30"},"Sat":{"open1":"08:00","close1":"17:00"},"Sun":{"open1":"08:00","close1":"17:00"}}}
+        ];
+
+        // Initialize map
+        const map = L.map('map').setView([47.6205, -122.3250], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let markers = [];
+        
+        // Check if bathroom is open now
+        function isOpen(bathroom) {
+            const now = new Date();
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const day = days[now.getDay()];
+            const currentTime = now.getHours() * 100 + now.getMinutes();
+            
+            const todayHours = bathroom.hours[day];
+            if (!todayHours || todayHours.open1 === 'Closed') return false;
+            
+            // Check first period
+            if (todayHours.open1 && todayHours.close1) {
+                const open1 = parseInt(todayHours.open1.replace(':', ''));
+                const close1 = parseInt(todayHours.close1.replace(':', ''));
+                if (currentTime >= open1 && currentTime <= close1) return true;
+            }
+            
+            // Check second period if exists
+            if (todayHours.open2 && todayHours.close2) {
+                const open2 = parseInt(todayHours.open2.replace(':', ''));
+                const close2 = parseInt(todayHours.close2.replace(':', ''));
+                if (currentTime >= open2 && currentTime <= close2) return true;
+            }
+            
+            return false;
+        }
+        
+        // Format hours for display
+        function formatHours(bathroom) {
+            const now = new Date();
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const day = days[now.getDay()];
+            const todayHours = bathroom.hours[day];
+            
+            if (!todayHours || todayHours.open1 === 'Closed') {
+                return 'Closed today';
+            }
+            
+            let hoursText = `Today: ${todayHours.open1} - ${todayHours.close1}`;
+            if (todayHours.open2 && todayHours.close2) {
+                hoursText += `, ${todayHours.open2} - ${todayHours.close2}`;
+            }
+            
+            return hoursText;
+        }
+        
+        // Create popup content
+        function createPopup(bathroom) {
+            const open = isOpen(bathroom);
+            const status = open ? '<strong style="color: #27ae60;">OPEN NOW</strong>' : '<strong style="color: #e74c3c;">CLOSED</strong>';
+            
+            return `
+                <div class="popup-content">
+                    <h3>${bathroom.name}</h3>
+                    <p>${bathroom.address}</p>
+                    <div class="code">#${bathroom.code}</div>
+                    <div class="hours">
+                        ${status}<br>
+                        ${formatHours(bathroom)}
+                    </div>
+                    <p style="margin-top: 10px; font-size: 11px; color: #95a5a6;">
+                        Last verified: ${bathroom.verified}
+                    </p>
+                </div>
+            `;
+        }
+        
+        // Add markers to map
+        function updateMarkers() {
+            const showOpenOnly = document.getElementById('showOpenOnly').checked;
+            
+            // Clear existing markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            
+            let openCount = 0;
+            
+            bathrooms.forEach(bathroom => {
+                const open = isOpen(bathroom);
+                
+                if (open) openCount++;
+                
+                if (!showOpenOnly || open) {
+                    const icon = L.divIcon({
+                        className: 'custom-marker',
+                        html: `<div style="
+                            width: 24px;
+                            height: 24px;
+                            background: ${open ? '#27ae60' : '#e74c3c'};
+                            border: 3px solid white;
+                            border-radius: 50%;
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                        "></div>`,
+                        iconSize: [24, 24]
+                    });
+                    
+                    const marker = L.marker([bathroom.lat, bathroom.lng], { icon })
+                        .bindPopup(createPopup(bathroom))
+                        .addTo(map);
+                    
+                    markers.push(marker);
+                }
+            });
+            
+            // Update stats
+            document.getElementById('openCount').textContent = openCount;
+            document.getElementById('totalCount').textContent = bathrooms.length;
+        }
+        
+        // Update current time display
+        function updateTime() {
+            const now = new Date();
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const timeStr = now.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            document.getElementById('currentTime').textContent = 
+                `${days[now.getDay()]}, ${timeStr} - Showing real-time availability`;
+        }
+        
+        // Event listeners
+        document.getElementById('showOpenOnly').addEventListener('change', updateMarkers);
+        
+        // Initial load and updates
+        updateMarkers();
+        updateTime();
+        
+        // Update every minute
+        setInterval(() => {
+            updateMarkers();
+            updateTime();
+        }, 60000);
+    </script>
+</body>
+</html>
