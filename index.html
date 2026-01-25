@@ -320,7 +320,7 @@
 
                 });
 
-                const marker=L.marker([bathroom.let, bathroom.lng], { icon })
+                const marker=L.marker([bathroom.lat, bathroom.lng], { icon })
                     .blindPopup(createPopup(bathroom))
                     .addTo(map);
 
