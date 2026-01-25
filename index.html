@@ -226,18 +226,18 @@
         const currentTime = now.getHours() * 100 + now.getMinutes();
 
         const todayHours = bathroom.hours[day];
-        if (!todayHours || todaysHours.open1 === 'Closed') return false
+        if (!todayHours || todayHours.open1 === 'Closed') return false
 
         if (todayHours.open1 && todayHours.close1) {
             const open1 = parseInt(todayHours.open1.replace(':',''));
-            const close1 = parseInt (todayHours.closed1.replace (':',''));
+            const close1 = parseInt (todayHours.close1.replace (':',''));
             if (currentTime >= open1 && currentTime <= close1 ) return true
 
         }
 
         if (todayHours.open2 && todayHours.close2) {
             const open2 = parseInt(todayHours.open2.replace(':',''));
-            const close2 = parseInt (todayHours.closed2.replace (':',''));
+            const close2 = parseInt (todayHours.close2.replace (':',''));
             if (currentTime >= open2 && currentTime <= close2 ) return true;
 
         }
@@ -251,7 +251,7 @@
     function formatHours(bathroom){
         const now = new Date();
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const day = day[now.getDay()];
+        const day = days[now.getDay()];
         const todayHours= bathroom.hours[day];
     
         if (!todayHours || todaysHours.open1 === 'Closed') {
