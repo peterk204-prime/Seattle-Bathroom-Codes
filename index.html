@@ -314,14 +314,14 @@
                         background: ${open? 'green': 'red'};
                         border-radius: 50%;
                         border: 3px solId white;
-                        box shadow: 0 2px 5px rgba(0,0,0,.3);
+                        box-shadow: 0 2px 5px rgba(0,0,0,.3);
                     "></div>`,
                     iconSize: [24,24]
 
                 });
 
                 const marker=L.marker([bathroom.lat, bathroom.lng], { icon })
-                    .blindPopup(createPopup(bathroom))
+                    .bindPopup(createPopup(bathroom))
                     .addTo(map);
 
                 markers.push(marker);
