@@ -295,7 +295,7 @@
     //map markers
 
         function updateMarkers () {
-            const showOpenOnly = document.getElementByid('showOpenOnly').checked;
+            const showOpenOnly = document.getElementById('showOpenOnly').checked;
 
             markers.forEach(m => map.removeLayer(m));
             markers = [];
@@ -329,8 +329,8 @@
                 }
             });
 
-            document.getElementByid('openCount').textContent= openCount;
-            document.getElementByid('totalCount').textContent = bathrooms.length;
+            document.getElementById('openCount').textContent= openCount;
+            document.getElementById('totalCount').textContent = bathrooms.length;
 
         }
 
@@ -346,11 +346,11 @@
 
                 });
             
-                document.getElementByid('currentTime').textContent= 
+                document.getElementById('currentTime').textContent= 
                     `${days[now.getDay()]}, ${timeStr} - Showing real-time availability`;
             }
 
-            document.getElementByid('showOpenOnly').addEventListener('change', updateMarkers);
+            document.getElementById('showOpenOnly').addEventListener('change', updateMarkers);
             
             updateMarkers();
             updateTime();
