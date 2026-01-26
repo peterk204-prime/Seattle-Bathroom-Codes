@@ -293,20 +293,31 @@ function parseCSV(csv) {
 // Load data from Google Sheets
 async function loadBathroomData() {
     try {
-        const response = await fetch(SHEET_URL);
+        // Add a timestamp to bust caches and ask the browser not to use cached responses.
+        const url = SHEET_URL + (SHEET_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
         const csvText = await response.text();
-        bathrooms = parseCSV(csvText);
+
+        // Parse and only replace the data if parsing succeeded
+        const parsedBathrooms = parseCSV(csvText);
+        if (!Array.isArray(parsedBathrooms)) throw new Error('Parsed data is not an array');
+
+        bathrooms = parsedBathrooms;
         console.log(`Loaded ${bathrooms.length} bathrooms from Google Sheets`);
 
-         // Hide loading indicator
-        document.getElementById('loadingIndicator').style.display = 'none';
-        
-        // Initialize map after data loads
+        // Hide loading indicator if present
+        const loadingEl = document.getElementById('loadingIndicator');
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        // Update markers/time
         updateMarkers();
         updateTime();
     } catch (error) {
         console.error('Error loading bathroom data:', error);
-        alert('Could not load bathroom data. Please refresh the page.');
+        // Don't aggressively alert the user every interval; show a console message.
+        const loadingEl = document.getElementById('loadingIndicator');
+        if (loadingEl) loadingEl.textContent = 'Could not load bathroom data (see console)';
     }
 }
 //intilize the map
