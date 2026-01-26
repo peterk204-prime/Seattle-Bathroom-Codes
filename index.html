@@ -153,11 +153,28 @@
         .open {background: green;}
         .closed {background: red;}
         
-
+        /* Loading indicator */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 999999;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
     </style>
 
 </head>
 <body>
+
+    <div id="loadingIndicator" class="loading">Loading bathrooms...</div>
+    
     <div class="header">
         <h1>Seattle Bathroom Finder</h1>
         <div class="status" id="currentTime"></div>
@@ -189,27 +206,98 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
-//THIS IS THE BATHROOM DATA
-//LOOKING TO AUTOMATE THIS IN THE FUTURE TO GRAB DATA FROM GOOGLE SHEET
-    const bathrooms =[
-            {"name":"Aviv Hummus Bar","address":"107 15th Ave E, Seattle, WA 98112","lat":47.618825,"lng":-122.312891,"code":"8269","verified":"01/01/2024","hours":{"Mon":{"open1":"Closed"},"Tue":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Wed":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Thu":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Fri":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Sat":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"},"Sun":{"open1":"11:00","close1":"15:00","open2":"17:00","close2":"21:00"}}},
-            {"name":"Gearhouse","address":"800 E Thomas St, Seattle, WA 98102","lat":47.621203,"lng":-122.32183,"code":"90210","verified":"01/01/2024","hours":{"Mon":{"open1":"07:30","close1":"20:00"},"Tue":{"open1":"07:30","close1":"20:00"},"Wed":{"open1":"07:30","close1":"20:00"},"Thu":{"open1":"07:30","close1":"20:00"},"Fri":{"open1":"07:30","close1":"20:00"},"Sat":{"open1":"07:00","close1":"19:00"},"Sun":{"open1":"07:00","close1":"19:00"}}},
-            {"name":"Carmelos Tacos","address":"101 Broadway E, Seattle, WA 98102","lat":47.618738,"lng":-122.320856,"code":"3569","verified":"01/01/2024","hours":{"Mon":{"open1":"10:00","close1":"22:00"},"Tue":{"open1":"10:00","close1":"22:00"},"Wed":{"open1":"10:00","close1":"22:00"},"Thu":{"open1":"10:00","close1":"22:00"},"Fri":{"open1":"10:00","close1":"23:00"},"Sat":{"open1":"10:00","close1":"23:00"},"Sun":{"open1":"10:00","close1":"22:00"}}},
-            {"name":"Diller Room","address":"1224 1st Ave, Seattle, WA 98101","lat":47.606769,"lng":-122.337908,"code":"2112","verified":"01/01/2024","hours":{"Mon":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Tue":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Wed":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Thu":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Fri":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Sat":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"},"Sun":{"open1":"00:00","close1":"02:00","open2":"14:00","close2":"23:59"}}},
-            {"name":"The Last Drop Bottle Shop - Capitol Hill","address":"8016 15th Ave NE, Seattle, WA 98115","lat":47.68719,"lng":-122.311964,"code":"8016","verified":"01/01/2024","hours":{"Mon":{"open1":"14:00","close1":"22:00"},"Tue":{"open1":"14:00","close1":"22:00"},"Wed":{"open1":"14:00","close1":"23:00"},"Thu":{"open1":"14:00","close1":"23:30"},"Fri":{"open1":"14:00","close1":"23:59"},"Sat":{"open1":"14:00","close1":"23:59"},"Sun":{"open1":"14:00","close1":"22:00"}}},
-            {"name":"Lost Lake Cafe & Lounge","address":"1505 10th Ave, Seattle, WA 98122","lat":47.614354,"lng":-122.31962,"code":"8003","verified":"01/01/2024","hours":{"Mon":{"open1":"07:00","close1":"23:59"},"Tue":{"open1":"07:00","close1":"23:59"},"Wed":{"open1":"07:00","close1":"23:59"},"Thu":{"open1":"07:00","close1":"23:59"},"Fri":{"open1":"00:00","close1":"02:00","open2":"07:00","close2":"23:59"},"Sat":{"open1":"00:00","close1":"03:00","open2":"07:00","close2":"23:59"},"Sun":{"open1":"00:00","close1":"03:00","open2":"07:00","close2":"23:59"}}},
-            {"name":"Top Pot Doughnuts","address":"888 Western Ave, Seattle, WA 98104","lat":47.603267,"lng":-122.336166,"code":"1188","verified":"01/01/2024","hours":{"Mon":{"open1":"06:00","close1":"17:00"},"Tue":{"open1":"06:00","close1":"17:00"},"Wed":{"open1":"06:00","close1":"17:00"},"Thu":{"open1":"06:00","close1":"17:00"},"Fri":{"open1":"06:00","close1":"17:00"},"Sat":{"open1":"07:00","close1":"17:00"},"Sun":{"open1":"07:00","close1":"17:00"}}},
-            {"name":"Shake Shack","address":"2115 Westlake Ave N, Seattle, WA 98121","lat":47.617065,"lng":-122.338458,"code":"2392","verified":"01/01/2024","hours":{"Mon":{"open1":"10:00","close1":"23:00"},"Tue":{"open1":"10:00","close1":"23:00"},"Wed":{"open1":"10:00","close1":"23:00"},"Thu":{"open1":"10:00","close1":"23:00"},"Fri":{"open1":"10:00","close1":"23:59"},"Sat":{"open1":"10:00","close1":"23:59"},"Sun":{"open1":"10:00","close1":"23:00"}}},
-            {"name":"The Victor Tavern - 6th & Lenora","address":"2121 6th Ave, Seattle, WA 98121","lat":47.615166,"lng":-122.340057,"code":"5951","verified":"01/01/2024","hours":{"Mon":{"open1":"11:00","close1":"22:00"},"Tue":{"open1":"11:00","close1":"22:00"},"Wed":{"open1":"11:00","close1":"22:00"},"Thu":{"open1":"11:00","close1":"22:00"},"Fri":{"open1":"11:00","close1":"22:00"},"Sat":{"open1":"11:00","close1":"22:00"},"Sun":{"open1":"11:00","close1":"21:00"}}},
-            {"name":"Due' Cucina Italian Restaurant - Capitol Hill","address":"412 Broadway E, Seattle, WA 98102","lat":47.622127,"lng":-122.320759,"code":"7825","verified":"01/01/2024","hours":{"Mon":{"open1":"11:30","close1":"21:30"},"Tue":{"open1":"11:30","close1":"21:30"},"Wed":{"open1":"11:30","close1":"21:30"},"Thu":{"open1":"11:30","close1":"21:30"},"Fri":{"open1":"11:30","close1":"21:30"},"Sat":{"open1":"11:30","close1":"21:30"},"Sun":{"open1":"11:30","close1":"21:30"}}},
-            {"name":"Von's 1000 Spirits","address":"1225 1st Ave, Seattle, WA 98101","lat":47.606538,"lng":-122.338225,"code":"1904","verified":"01/01/2024","hours":{"Mon":{"open1":"11:00","close1":"23:59"},"Tue":{"open1":"11:00","close1":"23:59"},"Wed":{"open1":"11:00","close1":"23:59"},"Thu":{"open1":"11:00","close1":"23:59"},"Fri":{"open1":"11:00","close1":"23:59"},"Sat":{"open1":"00:00","close1":"01:00","open2":"11:00","close2":"23:59"},"Sun":{"open1":"00:00","close1":"01:00","open2":"11:00","close2":"23:59"}}},
-            {"name":"Gameworks","address":"1511 7th Ave, Seattle, WA 98101","lat":47.611869,"lng":-122.33393,"code":"2142","verified":"01/01/2024","hours":{"Mon":{"open1":"12:00","close1":"20:00"},"Tue":{"open1":"Closed"},"Wed":{"open1":"12:00","close1":"21:00"},"Thu":{"open1":"12:00","close1":"21:00"},"Fri":{"open1":"12:00","close1":"23:00"},"Sat":{"open1":"11:00","close1":"23:00"},"Sun":{"open1":"11:00","close1":"21:00"}}},
-            {"name":"Victrola Coffee Roasters","address":"310 E Pike St, Seattle, WA 98122","lat":47.614297,"lng":-122.327315,"code":"9010","verified":"01/01/2024","hours":{"Mon":{"open1":"07:00","close1":"18:00"},"Tue":{"open1":"07:00","close1":"18:00"},"Wed":{"open1":"07:00","close1":"18:00"},"Thu":{"open1":"07:00","close1":"18:00"},"Fri":{"open1":"07:00","close1":"18:00"},"Sat":{"open1":"07:00","close1":"18:00"},"Sun":{"open1":"07:00","close1":"18:00"}}},
-            {"name":"Espresso Vivace Capitol Hill","address":"532 Broadway E, Seattle, WA 98102","lat":47.623501,"lng":-122.32078,"code":"2009","verified":"01/01/2024","hours":{"Mon":{"open1":"06:00","close1":"19:00"},"Tue":{"open1":"06:00","close1":"19:00"},"Wed":{"open1":"06:00","close1":"19:00"},"Thu":{"open1":"06:00","close1":"19:00"},"Fri":{"open1":"06:00","close1":"19:00"},"Sat":{"open1":"06:00","close1":"19:00"},"Sun":{"open1":"06:00","close1":"19:00"}}},
-            {"name":"Fairview Market Hall","address":"400 Fairview Ave N, Seattle, WA 98109","lat":47.622511,"lng":-122.333902,"code":"820","verified":"01/01/2024","hours":{"Mon":{"open1":"00:00","close1":"23:59"},"Tue":{"open1":"00:00","close1":"23:59"},"Wed":{"open1":"00:00","close1":"23:59"},"Thu":{"open1":"00:00","close1":"23:59"},"Fri":{"open1":"00:00","close1":"23:59"},"Sat":{"open1":"00:00","close1":"23:59"},"Sun":{"open1":"00:00","close1":"23:59"}}},
-            {"name":"Anchorhead Coffee","address":"2003 Western Ave STE 110A, Seattle, WA 98121","lat":47.610784,"lng":-122.344808,"code":"1379","verified":"01/01/2024","hours":{"Mon":{"open1":"07:00","close1":"15:30"},"Tue":{"open1":"07:00","close1":"15:30"},"Wed":{"open1":"07:00","close1":"15:30"},"Thu":{"open1":"07:00","close1":"15:30"},"Fri":{"open1":"07:00","close1":"15:30"},"Sat":{"open1":"08:00","close1":"17:00"},"Sun":{"open1":"08:00","close1":"17:00"}}}
-        ];
+//THIS IS THE BATHROOM DATA - AUTO-LOADED FROM GOOGLE SHEETS
+let bathrooms = []; // Start empty, will be filled from Google Sheet
 
+// Google Sheet CSV URL
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRe1AnbqfbL1CgB-pvl9f-HgSE7cLGs3_glbsXmL0UXga1OjIM5QDLCAgTJ9tkleuhdhE4O8Z6JLapF/pub?gid=0&single=true&output=csv'; 
+    
+// Function to parse CSV and convert to bathroom objects
+function parseCSV(csv) {
+    const lines = csv.split('\n');
+    const headers = lines[0].split('\t'); // Google Sheets uses tabs
+    const result = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue; // Skip empty lines
+        
+        const values = lines[i].split('\t');
+        const bathroom = {
+            name: values[0],
+            address: values[1],
+            lat: parseFloat(values[2]),
+            lng: parseFloat(values[3]),
+            code: values[4],
+            verified: values[5],
+            hours: {
+                Mon: {
+                    open1: values[6] || null,
+                    close1: values[7] || null,
+                    open2: values[8] || null,
+                    close2: values[9] || null
+                },
+                Tue: {
+                    open1: values[10] || null,
+                    close1: values[11] || null,
+                    open2: values[12] || null,
+                    close2: values[13] || null
+                },
+                Wed: {
+                    open1: values[14] || null,
+                    close1: values[15] || null,
+                    open2: values[16] || null,
+                    close2: values[17] || null
+                },
+                Thu: {
+                    open1: values[18] || null,
+                    close1: values[19] || null,
+                    open2: values[20] || null,
+                    close2: values[21] || null
+                },
+                Fri: {
+                    open1: values[22] || null,
+                    close1: values[23] || null,
+                    open2: values[24] || null,
+                    close2: values[25] || null
+                },
+                Sat: {
+                    open1: values[26] || null,
+                    close1: values[27] || null,
+                    open2: values[28] || null,
+                    close2: values[29] || null
+                },
+                Sun: {
+                    open1: values[30] || null,
+                    close1: values[31] || null,
+                    open2: values[32] || null,
+                    close2: values[33] || null
+                }
+            }
+        };
+        result.push(bathroom);
+    }
+    return result;
+}
+
+// Load data from Google Sheets
+async function loadBathroomData() {
+    try {
+        const response = await fetch(SHEET_URL);
+        const csvText = await response.text();
+        bathrooms = parseCSV(csvText);
+        console.log(`Loaded ${bathrooms.length} bathrooms from Google Sheets`);
+
+         // Hide loading indicator
+        document.getElementById('loadingIndicator').style.display = 'none';
+        
+        // Initialize map after data loads
+        updateMarkers();
+        updateTime();
+    } catch (error) {
+        console.error('Error loading bathroom data:', error);
+        alert('Could not load bathroom data. Please refresh the page.');
+    }
+}
 //intilize the map
     const map = L.map('map').setView([47.6205, -122.3250], 13);
         
@@ -351,15 +439,19 @@
             }
 
             document.getElementById('showOpenOnly').addEventListener('change', updateMarkers);
+
+            // Load data from Google Sheets on page load
+            loadBathroomData();
             
-            updateMarkers();
-            updateTime();
-        
-// Update every minute
-        setInterval(() => {
-            updateMarkers();
-            updateTime();
-        }, 60000);
+            // Reload data every 5 minutes (in case sheet is updated)
+            setInterval(() => {
+                loadBathroomData();
+            }, 300000); // 300000 ms = 5 minutes
+            
+            // Update time display every minute
+            setInterval(() => {
+                updateTime();
+            }, 60000);
     </script>
 </body>
 </html>
