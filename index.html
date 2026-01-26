@@ -227,8 +227,8 @@ function parseCSV(csv) {
         const bathroom = {
             name: values[0],
             address: values[1],
-            lat: parseFloat(values[2]),
-            lng: parseFloat(values[3]),
+            lat: parseFloat(values[2].trim()),
+            lng: parseFloat(values[3].trim()),
             code: values[4],
             verified: values[5],
             hours: {
