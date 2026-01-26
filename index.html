@@ -204,6 +204,9 @@
 <div id="map"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
 <script>
 //THIS IS THE BATHROOM DATA - AUTO-LOADED FROM GOOGLE SHEETS
 let bathrooms = []; // Start empty, will be filled from Google Sheet
@@ -213,23 +216,30 @@ const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRe1AnbqfbL1C
     
 // Function to parse CSV and convert to bathroom objects
 function parseCSV(csv) {
-    const lines = csv.split('\n');
-    const headers = lines[0].split('\t');
+    // Use PapaParse so quoted fields and commas are handled correctly.
+    const parsed = Papa.parse(csv, { skipEmptyLines: true }).data;
+    if (!parsed || parsed.length < 2) return [];
+
     const result = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue; // Skip empty lines
-        const values = lines[i].split('\t');
-        
-        console.log(`Parsed: ${values[0]}, lat=${values[2]}, lng=${values[3]}`);
-        
+    for (let i = 1; i < parsed.length; i++) {
+        const values = parsed[i].map(v => (typeof v === 'string' ? v.trim().replace(/\r/g,'') : v));
+
+        if (values.length < 4) continue;
+
+        const lat = parseFloat(values[2]);
+        const lng = parseFloat(values[3]);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+            console.warn(`Skipping row ${i+1} due to invalid lat/lng:`, values[2], values[3]);
+            continue;
+        }
+
         const bathroom = {
-            name: values[0],
-            address: values[1],
-            lat: parseFloat(values[2]),
-            lng: parseFloat(values[3]),
-            code: values[4],
-            verified: values[5],
+            name: values[0] || '',
+            address: values[1] || '',
+            lat: lat,
+            lng: lng,
+            code: values[4] || '',
+            verified: values[5] || '',
             hours: {
                 Mon: {
                     open1: values[6] || null,
