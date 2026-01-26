@@ -220,8 +220,10 @@ function parseCSV(csv) {
     
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue; // Skip empty lines
-        
         const values = lines[i].split('/t');
+        
+        console.log(`Parsed: ${values[0]}, lat=${values[2]}, lng=${values[3]}`);
+        
         const bathroom = {
             name: values[0],
             address: values[1],
